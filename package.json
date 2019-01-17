@@ -1,0 +1,23 @@
+{
+  "name": "dir-tree",
+  "version": "1.0.0",
+  "description": "display directory tree by command line",
+  "main": "index.js",
+  "author": "yuta4j1",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^10.12.18",
+    "prettier": "^1.15.3",
+    "rollup": "^1.0.0",
+    "rollup-plugin-typescript": "^1.0.0",
+    "tslib": "^1.9.3",
+    "typescript": "^3.2.2"
+  },
+  "scripts": {
+    "build": "prettier --config ./.prettierrc --write ./src/ts/*.ts | rollup -c",
+    "cli": "node dist/bundle.js --path C:\\Users\\kasca\\OneDrive\\ドキュメント\\textfiles"
+  },
+  "dependencies": {
+    "commander": "^2.19.0"
+  }
+}
