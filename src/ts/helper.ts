@@ -1,10 +1,21 @@
-// TODO もう少し汎用的なflatmapにする
-exports.double2SingleArray = (doubleArray: any[][]) => {
-  let result = [];
-  for (let i = 0, len = doubleArray.length; i < len; i++) {
-    for (let j = 0, len = doubleArray[i].length; j < len; j++) {
-      result.push(doubleArray[i][j]);
-    }
-  }
-  return result;
+// export const flattenArray = <T> (array: any): T[] => {
+
+//   if (Array.isArray(array)) {
+//     return array.reduce((accumulator: [], val: any) => {
+//       if (Array.isArray(val)) {
+//         const arr: T[] = flattenArray(val)
+//         accumulator.concat(arr);
+//       } else {
+//         accumulator.push(val);
+//       }
+//     }, []);
+//   } else {
+//     return array;
+//   }
+// }
+
+export const flattenDoubleArray = <T>(array: T[][]): T[] => {
+  return array.reduce((accumulator: T[], val: T[]) => {
+    return accumulator.concat(val);
+  }, []);
 };

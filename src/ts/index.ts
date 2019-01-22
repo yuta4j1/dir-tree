@@ -1,9 +1,10 @@
-const { readdir, statSync } = require('fs');
-const path = require('path');
-const { double2SingleArray } = require('./helper');
+// TODO テストしやすいように全体見直す
+import { readdir, statSync } from 'fs';
+import * as path from 'path';
+import { flattenDoubleArray } from './helper';
 
 // ファイルorディレクトリ
-interface DirNode {
+export interface DirNode {
   nodeName: string;
   absolutePath: string;
   isDirectory: boolean;
@@ -27,7 +28,7 @@ const display = (strs: string[] | string) => {
 
 // ディレクトリ > ファイルとなるようソート
 // TODO ソートが効かない
-const sortNode = (nodes: DirNode[]): DirNode[] => {
+export const sortNode = (nodes: DirNode[]): DirNode[] => {
   return nodes.sort((a: DirNode, b: DirNode) => {
     if (a.isDirectory && !b.isDirectory) {
       return 1;
@@ -185,7 +186,7 @@ const renderTree = (root: RootDir, dirTree: DirTree) => {
     );
     if (specifiedLayerNodes.length === 0) break;
     if (layerNum === 1) {
-      let nodes: DirNode[] = double2SingleArray(
+      let nodes: DirNode[] = flattenDoubleArray(
         specifiedLayerNodes.map((nodes: DirLayerNodes) => nodes.nodeNames)
       );
       nodes.forEach((node: DirNode) =>
