@@ -1,21 +1,31 @@
-// export const flattenArray = <T> (array: any): T[] => {
-
-//   if (Array.isArray(array)) {
-//     return array.reduce((accumulator: [], val: any) => {
-//       if (Array.isArray(val)) {
-//         const arr: T[] = flattenArray(val)
-//         accumulator.concat(arr);
-//       } else {
-//         accumulator.push(val);
-//       }
-//     }, []);
-//   } else {
-//     return array;
-//   }
-// }
+import { DirNode } from './types';
 
 export const flattenDoubleArray = <T>(array: T[][]): T[] => {
   return array.reduce((accumulator: T[], val: T[]) => {
     return accumulator.concat(val);
   }, []);
+};
+
+// ディレクトリ > ファイルとなるようソート
+export const sortNode = (nodes: DirNode[]): DirNode[] => {
+  return nodes.sort((a: DirNode, b: DirNode) => {
+    if (a.isDirectory && !b.isDirectory) {
+      return -1;
+    }
+    if (!a.isDirectory && b.isDirectory) {
+      return 1;
+    }
+    if (
+      (a.isDirectory && b.isDirectory) ||
+      (!a.isDirectory && !b.isDirectory)
+    ) {
+      if (a.nodeName > b.nodeName) {
+        return 1;
+      } else {
+        return -1;
+      }
+    } else {
+      return 0;
+    }
+  });
 };

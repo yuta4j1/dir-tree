@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "prettier --config ./.prettierrc --write ./{src,tests}/**/*.ts | rollup -c",
-    "cli": "node dist/bundle.js --path C:\\Users\\kasca\\OneDrive\\ドキュメント\\textfiles",
+    "cli": "node dist/bundle.js --path C:\\Users\\ozaki\\Documents\\sandbox-JavaScript\\dir-tree\\testfiles",
     "test": "jest"
   },
   "dependencies": {
