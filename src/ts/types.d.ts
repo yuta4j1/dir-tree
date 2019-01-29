@@ -8,10 +8,11 @@ export interface DirNode {
 // 階層あたりのファイルorディレクトリ群
 export interface DirLayerNodes {
   parentDirName: string;
-  nodeNames: DirNode[];
+  nodes: DirNode[];
   layerNum: number;
 }
 
+// 表示用ファイル情報
 export interface ALine {
   index: number;
   path: string;

@@ -1,4 +1,5 @@
 import { createDirTree } from './dirTree';
+import { consoleDisplay } from './helper';
 
 // エントリポイント
 const entry = (): void => {
@@ -11,7 +12,8 @@ const entry = (): void => {
     throw new Error('Illegal arguments.');
   }
   const rootPath = program.path;
-  createDirTree(rootPath);
+  const arr: string[] = createDirTree(rootPath);
+  consoleDisplay(arr);
 };
 
 entry();

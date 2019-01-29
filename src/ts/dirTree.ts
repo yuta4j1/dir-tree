@@ -1,34 +1,19 @@
-import { readdir, statSync } from 'fs';
+import { statSync, readdirSync } from 'fs';
 import * as path from 'path';
 import { sortNode, flattenDoubleArray } from './helper';
 import { DirNode, DirLayerNodes, ALine } from './types';
 
-// コンソール表示
-const consoleDisplay = (strs: string[] | string) => {
-  if (Array.isArray(strs)) {
-    strs.forEach(str => console.log(str));
-  } else {
-    console.log(strs);
-  }
-};
-
 // パス情報読み込み
-const readDirs = (targetPath: string): Promise<DirNode[]> => {
-  return new Promise(
-    (resolve: (dirs: DirNode[]) => void, reject: () => void) => {
-      readdir(targetPath, (err: Error, dirs: string[]) => {
-        if (err) throw err;
-        let datas: DirNode[] = dirs.map(dir => {
-          return {
-            nodeName: dir,
-            absolutePath: path.join(targetPath, dir),
-            isDirectory: statSync(path.join(targetPath, dir)).isDirectory()
-          };
-        });
-        resolve(sortNode(datas));
-      });
-    }
-  );
+const readDirs = (targetPath: string): DirNode[] => {
+  const dirs: string[] = readdirSync(targetPath);
+  let datas: DirNode[] = dirs.map(dir => {
+    return {
+      nodeName: dir,
+      absolutePath: path.join(targetPath, dir),
+      isDirectory: statSync(path.join(targetPath, dir)).isDirectory()
+    };
+  });
+  return sortNode(datas);
 };
 
 // ルート指定したパスからのディレクトリ階層を算出する
@@ -37,14 +22,11 @@ const calcLayerNum = (rootDir: RootDir, parentDir: string) => {
 };
 
 // 階層あたりのNode情報を取得する
-const createStem = async (
-  targetPath: string,
-  root: RootDir
-): Promise<DirLayerNodes> => {
-  const nodes: DirNode[] = await readDirs(targetPath);
+const createStem = (targetPath: string, root: RootDir): DirLayerNodes => {
+  const nodes: DirNode[] = readDirs(targetPath);
   return {
     parentDirName: targetPath,
-    nodeNames: nodes,
+    nodes: nodes,
     layerNum: calcLayerNum(root, targetPath)
   };
 };
@@ -74,16 +56,14 @@ class RootDir {
   }
 }
 
-// パスのセパレータ
 const pathSeparator = process.platform === 'linux' ? '/' : '\\';
 
-//
 const separatePath = (targetPath: string): string[] => {
   return targetPath.split(pathSeparator);
 };
 
-// ディレクトリ情報のみを取り出す
-const extractDir = (nodes: DirNode[], parentPath: string): string[] => {
+// DirNodeが保持するパス情報（絶対パス）の配列を返す
+const dirNodes2dirPaths = (nodes: DirNode[], parentPath: string): string[] => {
   return nodes
     .filter(node => node.isDirectory)
     .map(node => path.join(parentPath, node.nodeName));
@@ -94,8 +74,10 @@ class DirTree {
   constructor(layerNodes: DirLayerNodes[]) {
     this._layerNodes = layerNodes;
   }
-  get layerNodes(): DirLayerNodes[] {
-    return this._layerNodes;
+  extractLayerNodes(layerNum: number): DirLayerNodes[] {
+    return this._layerNodes.filter((node: DirLayerNodes) => {
+      return node.layerNum === layerNum;
+    });
   }
 }
 
@@ -129,20 +111,21 @@ const indexNumbering = (drawLines: ALine[]) => {
   }
 };
 
-const renderTree = (root: RootDir, dirTree: DirTree) => {
-  consoleDisplay(root.rootPath);
+// DirTreeオブジェクトを表示用のツリーデータに変換する
+const dirTree2StringTree = (dirTree: DirTree): ALine[] => {
   let treeCache: ALine[] = [];
   let layerNum = 1;
-  const layerNodes: DirLayerNodes[] = dirTree.layerNodes;
 
   while (true) {
-    let specifiedLayerNodes: DirLayerNodes[] = layerNodes.filter(
-      (node: DirLayerNodes) => node.layerNum === layerNum
+    let specifiedLayerNodes: DirLayerNodes[] = dirTree.extractLayerNodes(
+      layerNum
     );
+    // 該当する階層のLayerNode情報が存在しない、ループを抜ける
     if (specifiedLayerNodes.length === 0) break;
+
     if (layerNum === 1) {
       let nodes: DirNode[] = flattenDoubleArray(
-        specifiedLayerNodes.map((nodes: DirLayerNodes) => nodes.nodeNames)
+        specifiedLayerNodes.map((nodes: DirLayerNodes) => nodes.nodes)
       );
       nodes.forEach((node: DirNode) =>
         treeCache.push({
@@ -154,12 +137,13 @@ const renderTree = (root: RootDir, dirTree: DirTree) => {
       );
     } else {
       specifiedLayerNodes.forEach((layerNodes: DirLayerNodes) => {
+        // 親ディレクトリの位置情報を取得する
         let parentIndex: number = treeCache
           .filter((drawLine: ALine) =>
             drawLine.path.includes(layerNodes.parentDirName)
           )
           .map(drawLine => drawLine.index)[0];
-        let lines: ALine[] = layerNodes.nodeNames.map((node: DirNode) => {
+        let lines: ALine[] = layerNodes.nodes.map((node: DirNode) => {
           return {
             index: 0,
             path: node.absolutePath,
@@ -174,29 +158,42 @@ const renderTree = (root: RootDir, dirTree: DirTree) => {
     layerNum++;
   }
 
-  consoleDisplay(treeCache.map((line: ALine) => line.displayStr));
+  return treeCache;
 };
 
-export const createDirTree = async (rootPath: string) => {
+// ルートパスから、ディレクトリのツリーを描画する配列を取得する
+export const createDirTree = (rootPath: string): string[] => {
+  // ディレクトリ情報をオブジェクトに変換する
   const root: RootDir = new RootDir(rootPath, separatePath(rootPath));
-  let stemCache: DirLayerNodes[] = [];
-  let dirCache = new DirCache();
-  const firstStem: DirLayerNodes = {
+  let dirNodesCache: DirLayerNodes[] = [];
+  let dirPathCache = new DirCache();
+  const firstLayerNodes: DirLayerNodes = {
     parentDirName: root.rootPath,
-    nodeNames: await readDirs(root.rootPath),
+    nodes: readDirs(root.rootPath),
     layerNum: 1
   };
-  // cache directory info only
-  dirCache.addAll(extractDir(firstStem.nodeNames, firstStem.parentDirName));
-  stemCache.push(firstStem);
+  // cache directory path
+  dirPathCache.addAll(
+    dirNodes2dirPaths(firstLayerNodes.nodes, firstLayerNodes.parentDirName)
+  );
+  dirNodesCache.push(firstLayerNodes);
 
-  while (dirCache.isNotEmpty()) {
-    let targetPath: string = dirCache.dequeue();
-    const stemInfo: DirLayerNodes = await createStem(targetPath, root);
-    dirCache.addAll(extractDir(stemInfo.nodeNames, stemInfo.parentDirName));
-    stemCache.push(stemInfo);
+  while (dirPathCache.isNotEmpty()) {
+    let targetPath: string = dirPathCache.dequeue();
+    const dirNodes: DirLayerNodes = createStem(targetPath, root);
+    dirPathCache.addAll(
+      dirNodes2dirPaths(dirNodes.nodes, dirNodes.parentDirName)
+    );
+    dirNodesCache.push(dirNodes);
   }
 
-  const dirStem = new DirTree(stemCache);
-  renderTree(root, dirStem);
+  const dirTree = new DirTree(dirNodesCache);
+  const dirLines: ALine[] = dirTree2StringTree(dirTree);
+  const dispArray: string[] = [];
+  dispArray.push(root.rootPath);
+  for (let i = 0, len = dirLines.length; i < len; i++) {
+    dispArray.push(dirLines[i].displayStr);
+  }
+
+  return dispArray;
 };

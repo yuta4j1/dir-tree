@@ -29,3 +29,12 @@ export const sortNode = (nodes: DirNode[]): DirNode[] => {
     }
   });
 };
+
+// コンソール表示
+export const consoleDisplay = (strs: string[] | string) => {
+  if (Array.isArray(strs)) {
+    strs.forEach(str => console.log(str));
+  } else {
+    console.log(strs);
+  }
+};
