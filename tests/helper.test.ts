@@ -26,7 +26,6 @@ test('sorting DirNode', () => {
     }
   ];
   const sortedNodes: DirNode[] = sortNode(nodes);
-  console.log(sortedNodes);
   expect(sortedNodes[0]).toEqual({
     nodeName: 'a',
     absolutePath: '',
