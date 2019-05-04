@@ -1,16 +1,36 @@
 import { statSync, readdirSync } from 'fs';
 import * as path from 'path';
 import { sortNode, flattenDoubleArray } from './helper';
-import { DirNode, DirLayerNodes, ALine } from './types';
+import {
+  DirNode,
+  DirLayerNodes,
+  ALine,
+  Option,
+  DirNodeSrc,
+  ReadDirsFilter
+} from './types';
 
 // パス情報読み込み
-const readDirs = (targetPath: string): DirNode[] => {
-  const dirs: string[] = readdirSync(targetPath);
-  let datas: DirNode[] = dirs.map(dir => {
+const readDirs = (targetPath: string, filters: ReadDirsFilter[]): DirNode[] => {
+  let nodes: DirNodeSrc[] = readdirSync(targetPath, 'utf8').map(
+    (s: string): DirNodeSrc => {
+      return {
+        p: path.join(targetPath, s),
+        n: s
+      };
+    }
+  );
+  // コマンドライン指定のOptionから作成したfilterで結果を絞る
+  if (filters.length >= 1) {
+    for (let f of filters) {
+      nodes = nodes.filter(n => f(n));
+    }
+  }
+  let datas: DirNode[] = nodes.map(node => {
     return {
-      nodeName: dir,
-      absolutePath: path.join(targetPath, dir),
-      isDirectory: statSync(path.join(targetPath, dir)).isDirectory()
+      nodeName: node.n,
+      absolutePath: node.p,
+      isDirectory: statSync(node.p).isDirectory()
     };
   });
   return sortNode(datas);
@@ -22,8 +42,12 @@ const calcLayerNum = (rootDir: RootDir, parentDir: string) => {
 };
 
 // 階層あたりのNode情報を取得する
-const createStem = (targetPath: string, root: RootDir): DirLayerNodes => {
-  const nodes: DirNode[] = readDirs(targetPath);
+const createStem = (
+  targetPath: string,
+  root: RootDir,
+  filters: ReadDirsFilter[]
+): DirLayerNodes => {
+  const nodes: DirNode[] = readDirs(targetPath, filters);
   return {
     parentDirName: targetPath,
     nodes: nodes,
@@ -161,15 +185,30 @@ const dirTree2StringTree = (dirTree: DirTree): ALine[] => {
   return treeCache;
 };
 
+// readDirs関数にて適用させるfilter関数生成
+const makeReadDirsFilter = (option: Option): ReadDirsFilter[] => {
+  return Object.keys(option)
+    .map(k => {
+      switch (k) {
+        case 'directoryOnly':
+          return (src: DirNodeSrc) => statSync(src.p).isDirectory();
+        default:
+          return null;
+      }
+    })
+    .filter(v => v);
+};
+
 // ルートパスから、ディレクトリのツリーを描画する配列を取得する
-export const createDirTree = (rootPath: string): string[] => {
+export const createDirTree = (rootPath: string, option: Option): string[] => {
   // ディレクトリ情報をオブジェクトに変換する
   const root: RootDir = new RootDir(rootPath, separatePath(rootPath));
   let dirNodesCache: DirLayerNodes[] = [];
   let dirPathCache = new DirCache();
+  const readDirsFilters = makeReadDirsFilter(option);
   const firstLayerNodes: DirLayerNodes = {
     parentDirName: root.rootPath,
-    nodes: readDirs(root.rootPath),
+    nodes: readDirs(root.rootPath, readDirsFilters),
     layerNum: 1
   };
   // cache directory path
@@ -180,7 +219,11 @@ export const createDirTree = (rootPath: string): string[] => {
 
   while (dirPathCache.isNotEmpty()) {
     let targetPath: string = dirPathCache.dequeue();
-    const dirNodes: DirLayerNodes = createStem(targetPath, root);
+    const dirNodes: DirLayerNodes = createStem(
+      targetPath,
+      root,
+      readDirsFilters
+    );
     dirPathCache.addAll(
       dirNodes2dirPaths(dirNodes.nodes, dirNodes.parentDirName)
     );
