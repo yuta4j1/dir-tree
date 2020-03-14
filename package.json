@@ -22,6 +22,6 @@
     "test": "jest"
   },
   "dependencies": {
-    "commander": "^2.19.0"
+    "commander": "^5.0.0"
   }
 }
