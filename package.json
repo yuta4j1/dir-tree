@@ -6,7 +6,7 @@
   "author": "yuta4j1",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "^23.3.13",
+    "@types/jest": "27.0.2",
     "@types/node": "^10.12.18",
     "jest": "^23.6.0",
     "prettier": "^1.15.3",
